@@ -16,6 +16,8 @@ mod ekran_kare;
 mod ekran_modlar;
 mod ekran_sistem;
 mod ekran_valorant;
+mod gecmis;
+mod tani;
 mod tema;
 mod veri;
 
@@ -93,6 +95,11 @@ pub struct Uygulama {
     pub bildirim: Option<Bildirim>,
     pub yonetici: bool,
     son_okuma: Instant,
+    /// Son birkac dakikanin olcum gecmisi. Tek bir anlik sayi bu makinede
+    /// yaniltiyor, kararlar bunun ortalamasina bakilarak veriliyor.
+    pub gecmis: gecmis::Gecmis,
+    /// Gecmise ayni olcumu iki kez koymamak icin son islenen zaman damgasi.
+    son_ornek_s: u64,
     /// Sekmelerin kendi durumlari.
     pub kare: ekran_kare::KareDurumu,
     pub modlar: ekran_modlar::ModlarDurumu,
@@ -115,6 +122,8 @@ impl Uygulama {
             bildirim,
             yonetici: veri::yonetici_mi(),
             son_okuma: Instant::now(),
+            gecmis: gecmis::Gecmis::default(),
+            son_ornek_s: 0,
             kare: ekran_kare::KareDurumu::default(),
             modlar: ekran_modlar::ModlarDurumu::default(),
             sistem_tarama: None,
@@ -146,6 +155,32 @@ impl Uygulama {
         }
     }
 
+    /// Canli bir olcumu gecmise ekler.
+    ///
+    /// Daemon durmussa eklenmez: durmus bir daemon'un son yazdigi satiri
+    /// saniyede bir tekrar eklemek, ortalamayi olu bir degere dogru surukler ve
+    /// ekranda "sicaklik duragan" yazdirir - oysa olcum yoktur.
+    fn gecmise_isle(&mut self) {
+        let Some(d) = &self.durum else { return };
+        if !d.canli() {
+            return;
+        }
+        // Daemon saniyede bir yaziyor, arayuz 900 ms'de bir okuyor; ayni satiri
+        // iki kez saymamak icin dosyanin yasi degismediyse atlanir.
+        let damga = d.calisma_s;
+        if damga == self.son_ornek_s {
+            return;
+        }
+        self.son_ornek_s = damga;
+        self.gecmis.ekle(gecmis::Ornek {
+            cpu_c: d.cpu_c,
+            gpu_c: d.gpu_c,
+            cpu_util: d.cpu_util,
+            gpu_util: d.gpu_util,
+            cpu_fan: d.cpu_fan,
+        });
+    }
+
     fn geri_al(&mut self) {
         self.cfg = self.cfg_disk.clone();
         self.bildir(Bildirim::iyi("Değişiklikler geri alındı."));
@@ -157,6 +192,7 @@ impl eframe::App for Uygulama {
         if self.son_okuma.elapsed() > Duration::from_millis(900) {
             self.durum = Durum::oku();
             self.son_okuma = Instant::now();
+            self.gecmise_isle();
         }
         if self.bildirim.as_ref().is_some_and(Bildirim::bitti) {
             self.bildirim = None;

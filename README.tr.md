@@ -58,7 +58,7 @@ yükseltilmiş hak ister), sonra hiçbir şey sormaz.
 
 | Sekme | Ne var |
 |---|---|
-| Durum | canlı sıcaklık, yük, fan RPM, GPU watt, VRAM, uygulanan zarf |
+| Durum | önce hüküm, sonra sürekli/tepe sıcaklık ve beş dakikalık grafik, sonra ham ölçümler ve uygulanan zarf |
 | Modlar | altı modun fan aralığı, dizi, GPU saat tabanı/tavanı, sıcaklık hedefleri — ve BIOS'a yazılacak sekiz noktalı fan eğrisinin grafiği |
 | Kare hızı | panel tazeleme, VRR durumu, yazılacak sınırın tam değeri ve **neden o sayı olduğu**; hangi sürücü profilinin sınırladığı |
 | Valorant | hesap başına ayrı fps sınırları, hepsini hedefe eşitleme veya serbest bırakma |
@@ -72,6 +72,15 @@ devreder. ACPI ve NVML kilidini iki süreç birden tutmaz.
 durur, üst çubukta "kaydedilmemiş değişiklik" yazar; ancak **Uygula**'ya
 basınca dosyaya yazılır ve daemon yeniden başlatılır. **Geri al** her şeyi
 diskteki hâline döndürür.
+
+Durum sekmesi sayıyla değil **hükümle** başlar. Tek bir anlık okuma bu makinede
+yanıltıyor: tek bir çekirdeğin turboya çıkması paket sıcaklığını bir saniyeden
+kısa sürede 20 derece zıplatıyor. Bu yüzden her sıcaklık iki kez gösteriliyor -
+bir dakikalık ortalama (**sürekli**) ve **tepe** - ve karar ortalamaya bakarak
+veriliyor. Altında sıralı bulgular var: her biri neyin ölçüldüğünü, bunun ne
+anlama geldiğini ve ne yapılması gerektiğini söylüyor, ilgili kolun bulunduğu
+sekmeye götüren düğmeyi taşıyor. "Sürekli 90 derece" ile "tepe 90, ortalama 70,
+yapacak bir şey yok" artık ayrı görünüyor; önce ikisi de aynı sayıydı.
 
 Aynı ayarları terminalden yapmak istersen sihirbaz da duruyor:
 

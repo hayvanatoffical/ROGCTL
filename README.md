@@ -63,7 +63,7 @@ need elevation) and never asks again.
 
 | Tab | What is there |
 |---|---|
-| Durum (Status) | live temperatures, load, fan RPM, GPU watts, VRAM, the envelope in force |
+| Durum (Status) | a verdict first, then sustained vs peak temperature with a five-minute plot, then the raw gauges and the envelope in force |
 | Modlar (Modes) | fan range, knee, GPU clock floor/ceiling and temperature targets for all six modes — plus a plot of the eight-point curve that actually gets written to the BIOS |
 | Kare hızı (Frame rate) | panel refresh, VRR state, the exact cap that will be written and **why it is that number**; which driver profile is capping you |
 | Valorant | the per-account frame caps, matched to the target or released in one click |
@@ -78,6 +78,15 @@ the NVML lock at once.
 bar says there are unsaved changes, and only **Uygula** (Apply) writes to disk
 and restarts the daemon. **Geri al** (Revert) puts everything back to what is
 on disk.
+
+The status tab leads with a **verdict**, not a number. A single instantaneous
+reading is misleading here - one core hitting turbo moves the package 20 °C in
+under a second - so every temperature is shown twice, as a one-minute average
+(**sürekli**) and a peak (**tepe**), and the average is what decisions are made
+on. Below it sit ranked findings: each says what was measured, why it means
+what it means, what to do about it, and carries a button to the tab holding
+that lever. It tells "90 °C sustained" apart from "90 °C peak, 70 °C average,
+nothing to do" - which read identically before.
 
 The terminal wizard is still there if you prefer it:
 

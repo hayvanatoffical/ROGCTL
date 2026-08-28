@@ -173,3 +173,69 @@ pub fn olcum(ui: &mut Ui, etiket: &str, deger: &str, birim: &str, renk: Color32,
         }
     });
 }
+
+/// Zaman serisi grafigi: son birkac dakikanin sicakligi.
+///
+/// Sayilar tek basina "makine 90 derece" dedirtiyor; cizgi bunun bir tepe mi
+/// yoksa suren bir plato mu oldugunu tek bakista gosteriyor. Y ekseni sabit
+/// tutuluyor (`alt`..`ust`), cunku otomatik olceklenen bir eksende her sey
+/// dramatik gorunur - 60 ile 62 arasindaki dalgalanma bile.
+///
+/// `hedef` yatay bir referans cizgisi cizdirir (modun sicaklik hedefi); 0 ise
+/// cizilmez.
+pub fn grafik(
+    ui: &mut Ui,
+    veri: &[f32],
+    alt: f32,
+    ust: f32,
+    renk: Color32,
+    yukseklik: f32,
+    hedef: f32,
+) {
+    let genislik = ui.available_width();
+    let (rect, _) = ui.allocate_exact_size(egui::vec2(genislik, yukseklik), egui::Sense::hover());
+    let p = ui.painter();
+    p.rect_filled(rect, Rounding::same(4.0), Color32::from_rgb(0x14, 0x17, 0x1F));
+
+    let y = |v: f32| {
+        let o = ((v - alt) / (ust - alt)).clamp(0.0, 1.0);
+        rect.bottom() - o * rect.height()
+    };
+
+    if hedef > alt && hedef < ust {
+        let hy = y(hedef);
+        // Hedef cizgisi kesik olsun ki olcum cizgisiyle karismasin.
+        let mut x = rect.left();
+        while x < rect.right() {
+            let bit = (x + 4.0).min(rect.right());
+            p.line_segment(
+                [egui::pos2(x, hy), egui::pos2(bit, hy)],
+                Stroke::new(1.0_f32, CIZGI),
+            );
+            x += 9.0;
+        }
+    }
+
+    if veri.len() < 2 {
+        return;
+    }
+
+    // Cok orneği piksel basina bir noktaya indirger; aksi halde cizgi kendi
+    // uzerine katlanip lekeye donuyor.
+    let adim = (veri.len() as f32 / genislik.max(1.0)).max(1.0);
+    let mut noktalar: Vec<egui::Pos2> = Vec::new();
+    let mut i = 0.0_f32;
+    while (i as usize) < veri.len() {
+        let idx = i as usize;
+        let o = idx as f32 / (veri.len() - 1) as f32;
+        noktalar.push(egui::pos2(rect.left() + o * rect.width(), y(veri[idx])));
+        i += adim;
+    }
+    if let Some(son) = veri.last() {
+        noktalar.push(egui::pos2(rect.right(), y(*son)));
+    }
+
+    for ikili in noktalar.windows(2) {
+        p.line_segment([ikili[0], ikili[1]], Stroke::new(1.6_f32, renk));
+    }
+}

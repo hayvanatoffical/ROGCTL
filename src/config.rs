@@ -213,7 +213,7 @@ pub struct NvidiaCfg {
 /// preserving edits and wrong for shipping corrections: a measured fix to the
 /// default envelopes reaches nobody who already has a file. The installer
 /// compares this number, backs the old file up and regenerates.
-pub const CONFIG_VERSION: u32 = 6;
+pub const CONFIG_VERSION: u32 = 7;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Config {
@@ -414,14 +414,26 @@ fn default_envelope(mode: Mode) -> EnvelopeCfg {
             fan_knee_c: 58,
             demand_scaling: true,
         },
+        // Office was measured holding the package at 86C for as long as the
+        // work lasted, on 12% utilisation, with the fan sitting at 55% and
+        // 45 points of headroom it was not allowed to spend until 90C. That is
+        // what an 85C target buys: on a 20-thread part, 12% is two and a half
+        // P-cores at full turbo, which reaches the target within seconds and
+        // then stays pinned to it.
+        //
+        // Desktop work does not need a target that high. Dropping it to 76C
+        // and letting the ramp reach 70% moves the same load into the mid-70s;
+        // the fan is audible sooner, but the chassis stops living at 86C
+        // through an ordinary browsing afternoon. Anyone who wants the quieter
+        // trade back can raise this one number in the Modlar tab.
         Mode::Office => EnvelopeCfg {
             gpu_clock_ceiling_mhz: 1400,
             gpu_clock_floor_mhz: 700,
-            cpu_temp_target: 85,
+            cpu_temp_target: 76,
             gpu_temp_target: 70,
             fan_idle_pct: 8,
-            fan_max_pct: 55,
-            fan_knee_c: 60,
+            fan_max_pct: 70,
+            fan_knee_c: 58,
             demand_scaling: true,
         },
         // Demand scaling is off in all three game tiers, and that is a
