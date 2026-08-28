@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ROGCtl - Termal Yönetim</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="logo-section">
+                <div class="logo-icon">⚡</div>
+                <h1>ROGCtl</h1>
+                <span class="version">v1.0.0</span>
+            </div>
+            <div class="header-actions">
+                <button class="icon-btn" id="refresh-btn" title="Yenile">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+                    </svg>
+                </button>
+                <button class="icon-btn" id="settings-btn" title="Ayarlar">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6m9-9h-6m-6 0H3"/>
+                    </svg>
+                </button>
+                <button class="icon-btn minimize-btn" title="Simge Durumuna Küçült">−</button>
+                <button class="icon-btn close-btn" title="Kapat">×</button>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Status Section -->
+            <section class="status-section">
+                <div class="status-header">
+                    <h2>Durum</h2>
+                    <span class="status-badge running" id="daemon-status">
+                        <span class="status-dot"></span>
+                        Çalışıyor
+                    </span>
+                </div>
+
+                <div class="status-grid">
+                    <div class="status-card">
+                        <div class="card-icon cpu">🖥️</div>
+                        <div class="card-content">
+                            <div class="card-label">CPU</div>
+                            <div class="card-value"><span id="cpu-temp">--</span>°C</div>
+                            <div class="card-sub">Kullanım: <span id="cpu-util">--</span>%</div>
+                        </div>
+                    </div>
+
+                    <div class="status-card">
+                        <div class="card-icon gpu">🎮</div>
+                        <div class="card-content">
+                            <div class="card-label">GPU</div>
+                            <div class="card-value"><span id="gpu-temp">--</span>°C</div>
+                            <div class="card-sub">Kullanım: <span id="gpu-util">--</span>%</div>
+                        </div>
+                    </div>
+
+                    <div class="status-card">
+                        <div class="card-icon fan">🌀</div>
+                        <div class="card-content">
+                            <div class="card-label">Fanlar</div>
+                            <div class="card-value"><span id="cpu-fan">----</span> RPM</div>
+                            <div class="card-sub">GPU: <span id="gpu-fan">----</span> RPM</div>
+                        </div>
+                    </div>
+
+                    <div class="status-card">
+                        <div class="card-icon power">⚡</div>
+                        <div class="card-content">
+                            <div class="card-label">Güç</div>
+                            <div class="card-value"><span id="gpu-power">--</span>W</div>
+                            <div class="card-sub"><span id="power-source">--</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Performance Mode -->
+                <div class="mode-section">
+                    <div class="mode-header">
+                        <h3>Performans Modu</h3>
+                        <button class="btn-secondary" id="force-mode-btn">Manuel Mod</button>
+                    </div>
+                    <div class="mode-indicator">
+                        <div class="mode-badge" id="current-mode">
+                            <span class="mode-icon">🎯</span>
+                            <span class="mode-text">OFİS</span>
+                        </div>
+                        <div class="mode-details" id="mode-details">
+                            Fan: 30-70% | GPU: 1200-1800 MHz
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Charts Section -->
+            <section class="charts-section">
+                <div class="chart-container">
+                    <h3>Sıcaklık Geçmişi</h3>
+                    <canvas id="temp-chart"></canvas>
+                </div>
+            </section>
+
+            <!-- Quick Actions -->
+            <section class="actions-section">
+                <h3>Hızlı İşlemler</h3>
+                <div class="actions-grid">
+                    <button class="action-card" id="view-report">
+                        <div class="action-icon">📊</div>
+                        <div class="action-text">Rapor Görüntüle</div>
+                    </button>
+                    <button class="action-card" id="nvidia-check">
+                        <div class="action-icon">🎮</div>
+                        <div class="action-text">NVIDIA Ayarları</div>
+                    </button>
+                    <button class="action-card" id="valorant-fix">
+                        <div class="action-icon">🎯</div>
+                        <div class="action-text">Valorant FPS</div>
+                    </button>
+                    <button class="action-card" id="mem-cleanup">
+                        <div class="action-icon">💾</div>
+                        <div class="action-text">RAM Temizle</div>
+                    </button>
+                </div>
+            </section>
+        </main>
+
+        <!-- Footer -->
+        <footer class="app-footer">
+            <div class="footer-info">
+                <span id="uptime">Çalışma süresi: --</span>
+                <span class="separator">•</span>
+                <span id="last-update">Son güncelleme: --</span>
+            </div>
+            <div class="footer-actions">
+                <button class="btn-link" id="open-logs">Logları Görüntüle</button>
+                <span class="separator">•</span>
+                <button class="btn-link" id="open-config">Yapılandırma</button>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Modal for Settings -->
+    <div class="modal" id="settings-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Ayarlar</h2>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="setting-group">
+                    <h3>Genel</h3>
+                    <label class="setting-item">
+                        <input type="checkbox" id="autostart-check">
+                        <span>Başlangıçta otomatik başlat</span>
+                    </label>
+                    <label class="setting-item">
+                        <input type="checkbox" id="minimize-tray-check">
+                        <span>Kapatıldığında sistem tepsisinde çalışmaya devam et</span>
+                    </label>
+                </div>
+                <div class="setting-group">
+                    <h3>Bildirimler</h3>
+                    <label class="setting-item">
+                        <input type="checkbox" id="notifications-check">
+                        <span>Mod değişikliklerinde bildir</span>
+                    </label>
+                </div>
+                <div class="setting-group">
+                    <h3>Gelişmiş</h3>
+                    <button class="btn-primary" id="open-config-folder">Yapılandırma Klasörünü Aç</button>
+                    <button class="btn-secondary" id="restart-daemon">Daemon'u Yeniden Başlat</button>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary modal-cancel">İptal</button>
+                <button class="btn-primary modal-save">Kaydet</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

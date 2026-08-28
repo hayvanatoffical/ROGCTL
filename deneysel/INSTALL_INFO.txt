@@ -1,0 +1,64 @@
+═══════════════════════════════════════════════════════════════════
+                    ROGCtl - Kurulum Bilgilendirme
+═══════════════════════════════════════════════════════════════════
+
+ROGCtl Nedir?
+─────────────
+ROGCtl, ASUS ROG dizüstü bilgisayarlar için gelişmiş bir termal ve güç 
+yönetim yazılımıdır. Armoury Crate'in manuel modunun yerini akıllı 
+otomasyonla alır.
+
+
+Ne Yapar?
+─────────
+• Sistem yükünü sürekli analiz eder (CPU, GPU, VRAM kullanımı)
+• İş yükünü otomatik sınıflandırır (Boşta/Film/Ofis/Oyun/Render)
+• Fan eğrilerini ACPI üzerinden dinamik ayarlar
+• GPU saat hızını sıcaklık hedefini tutacak şekilde optimize eder
+• Kare hızını akıllıca sınırlar (görünmeyen kareler = gereksiz ısı)
+• RAM'i akıllıca temizler
+• Pilde/prize göre farklı davranır
+
+
+Sistem Gereksinimleri
+──────────────────────
+• ASUS ROG Dizüstü Bilgisayar (ROG Strix SCAR 15 için optimize edildi)
+• Windows 10/11 (64-bit)
+• NVIDIA Grafik Kartı (önerilir)
+• NVIDIA Sürücüsü (GPU özellikleri için)
+• Yönetici Yetkisi (kurulum ve çalışma için gerekli)
+
+
+Kurulum Sonrası
+───────────────
+ROGCtl otomatik olarak başlayacak ve her açılışta yönetici yetkisiyle 
+çalışmaya devam edecektir. Hiçbir şey yapmanıza gerek yok!
+
+
+Hızlı Komutlar
+──────────────
+  rogctl status       - Mevcut durumu göster
+  rogctl rapor        - HTML rapor oluştur ve tarayıcıda aç
+  rogctl mon 60       - 60 saniye canlı telemetri
+  rogctl nv kim       - Kare hızını kim sınırlıyor?
+  rogctl valorant     - Valorant FPS ayarları
+
+
+Önemli Notlar
+─────────────
+• CPU 95°C görmek bu makinede NORMALDIR - Intel i9-12900H tasarımı 
+  gereği Tjmax'i hedefler
+• GPU saat kontrolü için NVML gereklidir (NVIDIA sürücüsü)
+• NVML olmadan sadece fan kontrolü çalışır
+• Armoury Crate ile çakışabilir - ROGCtl ASUS servislerini durdurur
+
+
+Destek ve Dokümantasyon
+────────────────────────
+GitHub: https://github.com/yourusername/rogctl
+README.md dosyasında detaylı kullanım bilgileri bulunur
+
+
+═══════════════════════════════════════════════════════════════════
+                Devam etmek için İleri'ye tıklayın
+═══════════════════════════════════════════════════════════════════

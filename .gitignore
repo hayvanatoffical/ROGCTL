@@ -1,0 +1,21 @@
+# Rust
+/target/
+
+# Kurulumun ürettiği çalışma dosyaları / runtime artefacts
+/bin/*.exe
+/bin/*.log
+/bin/*.log.1
+/bin/rogctl.yaml
+/bin/rogctl.yaml.eski
+/bin/status.txt
+*.rogctl-yedek
+
+# Yerel raporlar / local reports
+probe-report.txt
+rapor*.html
+
+# Editör / OS
+.vscode/
+.idea/
+Thumbs.db
+desktop.ini
