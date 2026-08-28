@@ -174,8 +174,9 @@ pub struct NvidiaCfg {
     ///
     /// With VRR on this is ignored and the cap goes *below* refresh instead.
     /// There is no undershoot to compensate for above refresh - there is the
-    /// edge of the variable refresh window, and a frame rate that crosses it is
-    /// handed to VSync, which halves it. Only used when `max_fps` is 0.
+    /// edge of the variable refresh window. Crossing it drops VRR out of the
+    /// picture entirely: with VSync on the driver paces to the panel, with
+    /// VSync off you get tearing. Only used when `max_fps` is 0.
     #[serde(default = "default_fps_headroom")]
     pub fps_headroom: u32,
     /// Whether the VRR state is allowed to flip the cap below the refresh rate.
