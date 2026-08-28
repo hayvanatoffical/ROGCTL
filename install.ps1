@@ -1,4 +1,4 @@
-# rogctl - kalici kurulum
+﻿# rogctl - kalici kurulum
 #
 # Acilista YONETICI yetkisiyle baslayan bir gorev olusturur. Yonetici olmasi
 # sart, cunku GPU clock lock (voltaj kolu) NVML uzerinden yalnizca yukseltilmis
@@ -19,6 +19,12 @@ $build = "$root\target\release\rogctl.exe"
 # silmesin, yeniden derleme calisan daemon'un exe'sini kilitlemesin.
 $dir   = "$root\bin"
 $exe   = "$dir\rogctl.exe"
+# Arayuz ayni bin klasorunde durur: veri.rs kok dizini exe'nin yanindan
+# bulur, yani status.txt ve rogctl.yaml ile ayni yerde olmasi sart.
+$guiBuild = "$root\target\release\rogctl-gui.exe"
+$guiExe   = "$dir\rogctl-gui.exe"
+$kisayol  = "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\rogctl.lnk"
+$masaustu = "$([Environment]::GetFolderPath('Desktop'))\rogctl.lnk"
 $task  = "rogctl"
 
 # Yonetici sart: kayitli gorev en yuksek seviyede kosuyor ve ASUS termal
@@ -63,6 +69,10 @@ function Stop-RogctlNazikce {
     $kalan = Get-Process rogctl -ErrorAction SilentlyContinue
     if ($kalan) { $kalan | Stop-Process -Force }
 
+    # Arayuz exe'yi kilitler: acik dururken uzerine kopyalama basarisiz olur.
+    $arayuz = Get-Process rogctl-gui -ErrorAction SilentlyContinue
+    if ($arayuz) { $arayuz | Stop-Process -Force }
+
     # Kilidi her durumda birak. Windows bir gorevi durdururken sureci
     # sonlandiriyor, ona temiz cikis sinyali vermiyor - yani 'nazikce durdu'
     # varsayimi guvenli degil. Kilit zaten yoksa bu komut zararsiz.
@@ -86,13 +96,15 @@ if ($Uninstall) {
         [Environment]::SetEnvironmentVariable("Path", ($kept -join ';'), "User")
     }
 
+    Remove-Item $kisayol, $masaustu -Force -ErrorAction SilentlyContinue
+
     Write-Host "rogctl kaldirildi. Fan egrileri Armoury Crate'e birakildi." -ForegroundColor Green
     exit 0
 }
 
 if (-not (Test-Path $build)) {
     Write-Host "Derlenmis rogctl.exe bulunamadi: $build" -ForegroundColor Red
-    Write-Host "Once derle:  cargo build --release --manifest-path $root\Cargo.toml"
+    Write-Host "Once derle:  cargo build --release --workspace --manifest-path $root\Cargo.toml"
     exit 1
 }
 
@@ -111,6 +123,27 @@ foreach ($f in @("rogctl.yaml")) {
         Copy-Item $old "$dir\$f" -Force
         Write-Host "  [+] mevcut $f tasindi"
     }
+}
+
+# Arayuz zorunlu degil: daemon onsuz da calisir. Derlenmemisse kurulum
+# yarim kalmaz, sadece kisayol olusturulmaz.
+if (Test-Path $guiBuild) {
+    Copy-Item $guiBuild $guiExe -Force
+
+    # Tek tiklama ile acilsin - komut yazmak gerekmesin. Arayuz kendini
+    # UAC ile yukselttigi icin kisayolun yonetici bayragina ihtiyaci yok.
+    $sh = New-Object -ComObject WScript.Shell
+    foreach ($yol in @($kisayol, $masaustu)) {
+        $lnk = $sh.CreateShortcut($yol)
+        $lnk.TargetPath       = $guiExe
+        $lnk.WorkingDirectory = $dir
+        $lnk.Description      = 'rogctl - termal ve guc denetimi'
+        $lnk.Save()
+    }
+    Write-Host "  [+] arayuz kuruldu, Baslat menusune ve masaustune kisayol eklendi"
+} else {
+    Write-Host "  [!] rogctl-gui.exe derlenmemis - arayuz kurulmadi" -ForegroundColor Yellow
+    Write-Host "      derlemek icin: cargo build --release --workspace"
 }
 
 $cfg = "$dir\rogctl.yaml"
@@ -271,6 +304,10 @@ if (Get-Process rogctl -ErrorAction SilentlyContinue) {
     Write-Host "`nrogctl kuruldu ve YONETICI olarak calisiyor." -ForegroundColor Green
     Write-Host "Her acilista kendiliginden baslar; hicbir sey yapman gerekmez."
     Write-Host ""
+    if (Test-Path $guiExe) {
+        Write-Host "  arayuz  : Baslat menusunden 'rogctl' - her sey orada, komut gerekmez"
+        Write-Host ""
+    }
     Write-Host "  durum   : $exe status"
     Write-Host "  rapor   : $exe rapor      (HTML rapor uretir ve tarayicida acar)"
     Write-Host "  fps tani: $exe nv kim     (kare hizini hangi profil siniriyor)"

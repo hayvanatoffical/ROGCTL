@@ -40,16 +40,40 @@ sınırlamaya tabi değil, ama daemon çalışmadan otomatik işlemez.
 ## Kurulum
 
 ```powershell
-cargo build --release
+cargo build --release --workspace
 powershell -ExecutionPolicy Bypass -File .\install.ps1
 ```
 
 Betik gerekirse kendini yönetici olarak yeniden başlatır — GPU saat kilidi NVML
 üzerinden yalnızca yükseltilmiş haklarla yazılabiliyor. Kurulum, oturum
 açılışında yönetici olarak çalışan `rogctl` adlı bir zamanlanmış görev oluşturur
-ve `bin\` klasörünü PATH'e ekler.
+ve `bin\` klasörünü PATH'e ekler. Ayrıca arayüzü `bin\rogctl-gui.exe` olarak
+kurar ve Başlat menüsüne ve masaüstüne kısayol koyar.
 
-Kurulumdan sonra sihirbazı çalıştır:
+## Arayüz
+
+Günlük kullanımın tamamı buradan yapılır — Başlat menüsünden **rogctl**. Komut
+yazmak gerekmez. Açılırken bir kez UAC sorar (fan eğrisi ve saat kilidi
+yükseltilmiş hak ister), sonra hiçbir şey sormaz.
+
+| Sekme | Ne var |
+|---|---|
+| Durum | canlı sıcaklık, yük, fan RPM, GPU watt, VRAM, uygulanan zarf |
+| Modlar | altı modun fan aralığı, dizi, GPU saat tabanı/tavanı, sıcaklık hedefleri — ve BIOS'a yazılacak sekiz noktalı fan eğrisinin grafiği |
+| Kare hızı | panel tazeleme, VRR durumu, yazılacak sınırın tam değeri ve **neden o sayı olduğu**; hangi sürücü profilinin sınırladığı |
+| Valorant | hesap başına ayrı fps sınırları, hepsini hedefe eşitleme veya serbest bırakma |
+| Sistem | daemon başlat/durdur, ASUS servisleri, bellek temizliği, pil ölçekleri, donanım taraması |
+
+Arayüz donanıma kendisi dokunmaz: canlı değerleri daemon'un yazdığı
+`status.txt`'ten okur, ayarları `rogctl.yaml`'a yazar, gerisini `rogctl.exe`'ye
+devreder. ACPI ve NVML kilidini iki süreç birden tutmaz.
+
+**Hiçbir şey kendiliğinden uygulanmaz.** Değiştirdiğin her şey önce bellekte
+durur, üst çubukta "kaydedilmemiş değişiklik" yazar; ancak **Uygula**'ya
+basınca dosyaya yazılır ve daemon yeniden başlatılır. **Geri al** her şeyi
+diskteki hâline döndürür.
+
+Aynı ayarları terminalden yapmak istersen sihirbaz da duruyor:
 
 ```powershell
 rogctl kurulum
@@ -73,7 +97,8 @@ dokunmaz — onları ayrıca geri almak için `rogctl nv sifirla`.
 
 ## Günlük kullanım
 
-Hiçbir şey. Açılışta başlar, kendi kendine çalışır. Merak edersen:
+Hiçbir şey. Açılışta başlar, kendi kendine çalışır. Bir şeyi değiştirmek ya da
+görmek istersen arayüzü aç. Terminali tercih edersen:
 
 ```
 rogctl status     # daemon ne yapıyor
@@ -175,8 +200,13 @@ Log: `bin\rogctl.log` (1.5 MB'ı geçince `rogctl.log.1` olarak devredilir).
 
 ## Kaynak düzeni
 
+Depo bir cargo workspace'i: kök paket çekirdek ve komut satırı, `gui/` arayüz.
+İkisi de `src/lib.rs`'e bakar, yani arayüzün gösterdiği değer ile daemon'un
+uyguladığı değer aynı koddan gelir.
+
 | Dosya | İçerik |
 |---|---|
+| `lib.rs` | çekirdeğin modül listesi — CLI ve arayüzün ortak tabanı |
 | `main.rs` | komut dağıtımı, daemon döngüsü, durum/rapor çıktısı |
 | `kurulum.rs` | kurulum sihirbazı: donanım taraması, sorular, ayar yazımı |
 | `policy.rs` | iş yükü sınıflandırma, mod zarfları, saat governor'ı |
@@ -187,6 +217,9 @@ Log: `bin\rogctl.log` (1.5 MB'ı geçince `rogctl.log.1` olarak devredilir).
 | `valorant.rs` | Valorant'ın kendi ayar dosyası |
 | `memory.rs` | standby listesi temizliği |
 | `report.rs` | HTML rapor üretimi |
+| `gui/src/tema.rs` | tek renk paleti ve kart/başlık/ölçüm bileşenleri |
+| `gui/src/veri.rs` | dışarıyla konuşan tek katman: status.txt, yaml, rogctl.exe, UAC |
+| `gui/src/ekran_*.rs` | beş sekmenin içerikleri |
 
 `deneysel/` yarıda bırakılmış bir GUI ve kurulum iskeleti tutuyor. İçindeki
 hiçbir şey bağlı değil ve derlemenin parçası değil — kendi README'sine bak.

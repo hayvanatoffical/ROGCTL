@@ -45,15 +45,41 @@ do not have that restriction, but nothing runs automatically without the daemon.
 ## Install
 
 ```powershell
-cargo build --release
+cargo build --release --workspace
 powershell -ExecutionPolicy Bypass -File .\install.ps1
 ```
 
 The script re-launches itself elevated if needed — the NVML clock lock can only
 be written with administrator rights. Install registers a scheduled task named
-`rogctl` that runs elevated at logon, and adds `bin\` to PATH.
+`rogctl` that runs elevated at logon, and adds `bin\` to PATH. It also installs
+the interface as `bin\rogctl-gui.exe` and puts a shortcut in the Start menu and
+on the desktop.
 
-Then run the wizard:
+## The interface
+
+This is where the day-to-day work happens — **rogctl** in the Start menu. No
+commands to type. It asks for UAC once at launch (fan curves and the clock lock
+need elevation) and never asks again.
+
+| Tab | What is there |
+|---|---|
+| Durum (Status) | live temperatures, load, fan RPM, GPU watts, VRAM, the envelope in force |
+| Modlar (Modes) | fan range, knee, GPU clock floor/ceiling and temperature targets for all six modes — plus a plot of the eight-point curve that actually gets written to the BIOS |
+| Kare hızı (Frame rate) | panel refresh, VRR state, the exact cap that will be written and **why it is that number**; which driver profile is capping you |
+| Valorant | the per-account frame caps, matched to the target or released in one click |
+| Sistem (System) | daemon start/stop, ASUS services, memory trimming, battery scaling, hardware probe |
+
+The interface never touches hardware itself: it reads live values from the
+`status.txt` the daemon writes, edits `rogctl.yaml`, and shells out to
+`rogctl.exe` for everything else. Two processes never hold the ACPI handle and
+the NVML lock at once.
+
+**Nothing is applied on its own.** Every change sits in memory first, the top
+bar says there are unsaved changes, and only **Uygula** (Apply) writes to disk
+and restarts the daemon. **Geri al** (Revert) puts everything back to what is
+on disk.
+
+The terminal wizard is still there if you prefer it:
 
 ```powershell
 rogctl kurulum
@@ -78,7 +104,8 @@ uninstall does not touch them — undo those separately with `rogctl nv sifirla`
 
 ## Daily use
 
-Nothing. It starts at logon and runs itself. If you are curious:
+Nothing. It starts at logon and runs itself. Open the interface when you want to
+see or change something. If you prefer the terminal:
 
 ```
 rogctl status     # what the daemon is doing
@@ -183,8 +210,13 @@ Log: `bin\rogctl.log` (rolled to `rogctl.log.1` past 1.5 MB).
 
 ## Source layout
 
+The repo is a cargo workspace: the root package is the core plus the CLI, `gui/`
+is the interface. Both build on `src/lib.rs`, so the number the interface shows
+and the number the daemon applies come from the same code.
+
 | File | Contents |
 |---|---|
+| `lib.rs` | the core's module list — shared base for the CLI and the interface |
 | `main.rs` | command dispatch, daemon loop, status/report output |
 | `kurulum.rs` | setup wizard: hardware probe, questions, config writing |
 | `policy.rs` | workload classification, mode envelopes, clock governor |
@@ -195,6 +227,9 @@ Log: `bin\rogctl.log` (rolled to `rogctl.log.1` past 1.5 MB).
 | `valorant.rs` | Valorant's own settings file |
 | `memory.rs` | standby list trimming |
 | `report.rs` | HTML report generation |
+| `gui/src/tema.rs` | one palette, one set of card/heading/readout widgets |
+| `gui/src/veri.rs` | the only layer that talks outward: status.txt, yaml, rogctl.exe, UAC |
+| `gui/src/ekran_*.rs` | the five tabs |
 
 `deneysel/` holds an abandoned GUI and installer scaffold. Nothing in it is
 wired up or part of the build — see its own README.

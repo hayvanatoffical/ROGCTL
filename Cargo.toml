@@ -1,3 +1,6 @@
+[workspace]
+members = [".", "gui"]
+
 [package]
 name = "rogctl"
 version = "0.1.0"

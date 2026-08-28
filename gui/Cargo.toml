@@ -1,0 +1,26 @@
+[package]
+name = "rogctl-gui"
+version = "0.1.0"
+edition = "2021"
+description = "rogctl icin masaustu arayuzu"
+
+[[bin]]
+name = "rogctl-gui"
+path = "src/main.rs"
+
+[dependencies]
+rogctl = { path = ".." }
+anyhow = "1"
+serde_yaml = "0.9"
+eframe = { version = "0.29", default-features = false, features = ["glow", "default_fonts"] }
+egui = "0.29"
+
+[dependencies.windows-sys]
+version = "0.59"
+features = [
+    "Win32_Foundation",
+    "Win32_UI_Shell",
+    "Win32_UI_WindowsAndMessaging",
+    "Win32_Security",
+    "Win32_System_Threading",
+]

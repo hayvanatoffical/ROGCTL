@@ -13,7 +13,7 @@ use serde::{Deserialize, Serialize};
 use crate::policy::{Envelope, Mode};
 
 /// One mode's thermal envelope, as it appears in the file.
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct EnvelopeCfg {
     pub gpu_clock_ceiling_mhz: u32,
     pub gpu_clock_floor_mhz: u32,

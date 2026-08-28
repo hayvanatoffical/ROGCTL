@@ -1,20 +1,5 @@
-mod acpi;
-mod config;
-mod cooling;
-mod control;
-mod devices;
-mod gpu;
-mod kurulum;
-mod memory;
-mod nvapi;
-mod policy;
-mod report;
-mod valorant;
-mod power;
-mod process;
-mod services;
-mod telemetry;
-
+use rogctl::{acpi, config, kurulum, cooling, control, devices, gpu, memory, nvapi,
+             policy, power, process, report, services, telemetry, valorant};
 use std::collections::BTreeMap;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
