@@ -11,6 +11,7 @@
 //! Clock *offsets* are not exposed by NVML and need NVAPI; that lives
 //! elsewhere. Everything here is reversible and nothing persists across a
 //! driver reload.
+#![allow(clippy::missing_transmute_annotations)]
 
 use std::ffi::{c_int, c_uint, c_void, CString};
 use std::mem;

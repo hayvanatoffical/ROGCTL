@@ -17,5 +17,6 @@ rapor*.html
 # Editör / OS
 .vscode/
 .idea/
+.claude/
 Thumbs.db
 desktop.ini

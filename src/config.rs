@@ -1,4 +1,4 @@
-﻿//! User-editable configuration.
+//! User-editable configuration.
 //!
 //! Everything the policy engine used to hardcode lives here instead: the
 //! envelopes, the classifier's patience, the battery behaviour and the
@@ -241,10 +241,27 @@ pub struct Config {
 
 impl Config {
     pub fn path() -> PathBuf {
-        std::env::current_exe()
-            .ok()
-            .and_then(|p| p.parent().map(|d| d.join("rogctl.yaml")))
-            .unwrap_or_else(|| PathBuf::from("rogctl.yaml"))
+        let exe = std::env::current_exe().unwrap_or_default();
+        let yan = exe.parent().map(Path::to_path_buf).unwrap_or_default();
+        let in_target = yan.to_string_lossy().contains("\\target\\");
+        if !in_target && yan.join("rogctl.exe").exists() {
+            return yan.join("rogctl.yaml");
+        }
+        let mut p = yan.clone();
+        for _ in 0..4 {
+            if !p.pop() {
+                break;
+            }
+            let aday = p.join("bin");
+            if aday.join("rogctl.exe").exists() {
+                return aday.join("rogctl.yaml");
+            }
+        }
+        let cwd_bin = PathBuf::from("bin");
+        if cwd_bin.join("rogctl.exe").exists() {
+            return cwd_bin.join("rogctl.yaml");
+        }
+        yan.join("rogctl.yaml")
     }
 
     /// Load the config, writing the defaults out first if there is no file.

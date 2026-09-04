@@ -45,6 +45,8 @@ fn claim_single_instance() -> bool {
 /// Writes to the console when run interactively, to a file when detached.
 struct Log {
     file: Option<std::fs::File>,
+    path: Option<std::path::PathBuf>,
+    bytes_written: u64,
 }
 
 /// Size at which the log is rolled over.
@@ -58,33 +60,44 @@ const LOG_MAX_BYTES: u64 = 1_500_000;
 
 impl Log {
     fn new(daemon: bool) -> Self {
-        let file = if daemon {
+        if daemon {
             let path = log_path();
             Self::rotate(&path);
-            std::fs::OpenOptions::new()
+            let bytes_written = std::fs::metadata(&path).map(|m| m.len()).unwrap_or(0);
+            let file = std::fs::OpenOptions::new()
                 .create(true)
                 .append(true)
-                .open(path)
-                .ok()
+                .open(&path)
+                .ok();
+            Self {
+                file,
+                path: Some(path),
+                bytes_written,
+            }
         } else {
-            None
-        };
-        Self { file }
+            Self {
+                file: None,
+                path: None,
+                bytes_written: 0,
+            }
+        }
     }
 
     /// Move an oversized log aside, replacing whatever was set aside before.
-    ///
-    /// Done at startup rather than mid-run: the file is held open for the life
-    /// of the daemon, and renaming a file out from under its own handle would
-    /// leave the writes going to a file nobody can find.
     fn rotate(path: &std::path::Path) {
         let too_big = std::fs::metadata(path).is_ok_and(|m| m.len() > LOG_MAX_BYTES);
         if !too_big {
             return;
         }
+        Self::force_rotate(path);
+    }
+
+    /// Force rollover of the log to `.log.1`, even if under limit.
+    fn force_rotate(path: &std::path::Path) {
+        if !path.exists() {
+            return;
+        }
         let previous = path.with_extension("log.1");
-        // A failure here is not worth refusing to start over: the worst case is
-        // a log that keeps growing, which is what it did before this existed.
         let _ = std::fs::remove_file(&previous);
         let _ = std::fs::rename(path, &previous);
     }
@@ -95,6 +108,19 @@ impl Log {
                 use std::io::Write;
                 let _ = writeln!(f, "{s}");
                 let _ = f.flush();
+                self.bytes_written = self.bytes_written.saturating_add(s.len() as u64 + 2);
+                if self.bytes_written > LOG_MAX_BYTES {
+                    if let Some(path) = self.path.as_deref() {
+                        self.file = None;
+                        Self::force_rotate(path);
+                        self.bytes_written = 0;
+                        self.file = std::fs::OpenOptions::new()
+                            .create(true)
+                            .append(true)
+                            .open(path)
+                            .ok();
+                    }
+                }
             }
             None => println!("{s}"),
         }
@@ -121,11 +147,32 @@ struct StatusSnapshot<'a> {
     mem: &'a memory::Reclaimer,
 }
 
+fn kok() -> std::path::PathBuf {
+    let exe = std::env::current_exe().unwrap_or_default();
+    let yan = exe.parent().map(std::path::Path::to_path_buf).unwrap_or_default();
+    let in_target = yan.to_string_lossy().contains("\\target\\");
+    if !in_target && yan.join("rogctl.exe").exists() {
+        return yan;
+    }
+    let mut p = yan.clone();
+    for _ in 0..4 {
+        if !p.pop() {
+            break;
+        }
+        let aday = p.join("bin");
+        if aday.join("rogctl.exe").exists() {
+            return aday;
+        }
+    }
+    let cwd_bin = std::path::PathBuf::from("bin");
+    if cwd_bin.join("rogctl.exe").exists() {
+        return cwd_bin;
+    }
+    yan
+}
+
 fn sidecar(name: &str) -> std::path::PathBuf {
-    std::env::current_exe()
-        .ok()
-        .and_then(|p| p.parent().map(|d| d.join(name)))
-        .unwrap_or_else(|| std::path::PathBuf::from(name))
+    kok().join(name)
 }
 
 fn now_unix() -> u64 {
@@ -264,11 +311,84 @@ fn rapor_cmd() -> anyhow::Result<()> {
     Ok(())
 }
 
+/// Inspect or rotate the log file.
+fn log_cmd(action: Option<&str>) -> anyhow::Result<()> {
+    let path = log_path();
+    let prev_path = path.with_extension("log.1");
+
+    match action {
+        Some("rotate" | "temizle" | "sifirla" | "devret") => {
+            if !path.exists() {
+                println!("Log dosyasi bulunamadi: {}", path.display());
+                return Ok(());
+            }
+            let size = std::fs::metadata(&path).map(|m| m.len()).unwrap_or(0);
+            Log::force_rotate(&path);
+            println!(
+                "Log devredildi: {} ({:.2} MB) -> {}",
+                path.display(),
+                size as f64 / (1024.0 * 1024.0),
+                prev_path.display()
+            );
+            println!("Yeni log dosyasi sonraki yazmada otomatik olusturulacak.");
+        }
+        _ => {
+            println!("rogctl LOG DURUMU");
+            println!("{:-<52}", "");
+            println!("  aktif log   : {}", path.display());
+            if path.exists() {
+                let bytes = std::fs::metadata(&path).map(|m| m.len()).unwrap_or(0);
+                let content = std::fs::read_to_string(&path).unwrap_or_default();
+                let lines = content.lines().count();
+                let sessions = content
+                    .lines()
+                    .filter(|l| l.starts_with("--- rogctl basladi"))
+                    .count();
+                println!(
+                    "  boyut       : {:.2} MB / {:.2} MB limit (%{:.0})",
+                    bytes as f64 / (1024.0 * 1024.0),
+                    LOG_MAX_BYTES as f64 / (1024.0 * 1024.0),
+                    (bytes as f64 / LOG_MAX_BYTES as f64) * 100.0
+                );
+                println!("  satir sayisi: {lines}");
+                println!("  oturum sayisi: {sessions}");
+            } else {
+                println!("  durum       : Dosya henuz olusmadi");
+            }
+
+            println!();
+            println!("  onceki log  : {}", prev_path.display());
+            if prev_path.exists() {
+                let bytes = std::fs::metadata(&prev_path).map(|m| m.len()).unwrap_or(0);
+                let content = std::fs::read_to_string(&prev_path).unwrap_or_default();
+                let lines = content.lines().count();
+                println!(
+                    "  boyut       : {:.2} MB ({lines} satir)",
+                    bytes as f64 / (1024.0 * 1024.0)
+                );
+            } else {
+                println!("  durum       : Onceki devir yedegi yok");
+            }
+
+            if path.exists() {
+                println!();
+                println!("Son 5 satir:");
+                println!("{:-<52}", "");
+                let content = std::fs::read_to_string(&path).unwrap_or_default();
+                let last_lines: Vec<&str> = content.lines().rev().take(5).collect();
+                for l in last_lines.into_iter().rev() {
+                    println!("  {l}");
+                }
+            }
+            println!();
+            println!("Devretmek/sifirlamak icin: rogctl log rotate");
+        }
+    }
+    Ok(())
+}
+
 fn log_path() -> std::path::PathBuf {
-    std::env::current_exe()
-        .ok()
-        .and_then(|p| p.parent().map(|d| d.join("rogctl.log")))
-        .unwrap_or_else(|| std::path::PathBuf::from("rogctl.log"))
+    sidecar("rogctl.log")
 }
 
 fn parse_mode(s: &str) -> Option<policy::Mode> {
@@ -443,7 +563,7 @@ fn refresh_watch(seconds: u64) -> anyhow::Result<()> {
         println!("  {cap:>12}  {n:>4} sn");
     }
 
-    let low = seen.keys().filter(|&&h| h > 0 && h < 100).map(|&h| h).next();
+    let low = seen.keys().filter(|&&h| h > 0 && h < 100).copied().next();
     println!("{:-<50}", "");
     match low {
         Some(hz) => {
@@ -897,11 +1017,11 @@ const LIVE_SENSORS: &[u32] = &[0x0011_0013, 0x0011_0014];
 /// The command list, shared by `rogctl yardim` and by an unrecognised
 /// command. One text, so the two can never drift apart.
 fn usage() -> String {
-    format!(
     "Kullanim: rogctl <komut>\n\
      \n\
      GUNLUK\n\
        status                 calisan daemon'in anlik durumu\n\
+       log [rotate|temizle]   log durumu, boyutu ve devretme\n\
        rapor                  log'dan HTML rapor uret ve tarayicida ac\n\
        mon [saniye]           canli telemetri\n\
        plan                   her modun yazacagi fan egrisini goster\n\
@@ -925,8 +1045,7 @@ fn usage() -> String {
        daemon                 arka planda surekli calistir\n\
        run [saniye]           onplanda calistir\n\
      \n\
-     teshis: probe | watch | curves | gpu | selftest | ppt | perf | setdev"
-    )
+     teshis: probe | watch | curves | gpu | selftest | ppt | perf | setdev".to_string()
 }
 
 fn main() {
@@ -949,6 +1068,7 @@ fn main() {
         "setdev" => setdev_cmd(),
         "plan" => plan_cmd(),
         "status" => status_cmd(),
+        "log" => log_cmd(std::env::args().nth(2).as_deref()),
         "rapor" => rapor_cmd(),
         "mem" => mem_cmd(std::env::args().nth(2)),
         "cool" => {
@@ -1055,7 +1175,7 @@ fn probe() -> anyhow::Result<()> {
     }
 
     println!("{:-<86}", "");
-    println!("{:<12} {:<20} {:>10}  {}", "ID", "AD", "DEGER", "NOT");
+    println!("{:<12} {:<20} {:>10}  NOT", "ID", "AD", "DEGER");
     println!("{:-<86}", "");
 
     for d in devices::KNOWN {
@@ -1439,12 +1559,12 @@ fn run(secs: Option<u64>, forced: Option<policy::Mode>, daemon: bool) -> anyhow:
     let mut pending_lower: Option<(u32, u32)> = None;
 
     while !STOP.load(Ordering::SeqCst) {
-        if tick % SLOW_POLL_TICKS == 0 {
+        if tick.is_multiple_of(SLOW_POLL_TICKS) {
             procs = process::running_names();
             power = power::read();
         }
 
-        if cfg.nvidia.enabled && tick > 0 && tick % REFRESH_RECHECK_TICKS == 0 {
+        if cfg.nvidia.enabled && tick > 0 && tick.is_multiple_of(REFRESH_RECHECK_TICKS) {
             match nvapi::NvApi::open() {
                 Ok(nv) => {
                     let want = cap_policy(&cfg.nvidia)
@@ -1556,7 +1676,7 @@ fn run(secs: Option<u64>, forced: Option<policy::Mode>, daemon: bool) -> anyhow:
         // not move meaningfully within a second, and the mode shift that matters
         // most is evaluated on the tick it happens.
         let shifted = was_heavy.map(|w| w != heavy(mode)).unwrap_or(false);
-        if shifted || tick % SLOW_POLL_TICKS == 0 {
+        if shifted || tick.is_multiple_of(SLOW_POLL_TICKS) {
             if let Some(line) = reclaimer.tick(shifted) {
                 log.line(&format!("[{:>5.0}s] {line}", start.elapsed().as_secs_f32()));
             }
@@ -1564,7 +1684,7 @@ fn run(secs: Option<u64>, forced: Option<policy::Mode>, daemon: bool) -> anyhow:
         was_heavy = Some(heavy(mode));
 
         // Something else may still overwrite the curves; put them back on a timer.
-        if cfg.curve_refresh_ticks > 0 && tick % cfg.curve_refresh_ticks == 0 {
+        if cfg.curve_refresh_ticks > 0 && tick.is_multiple_of(cfg.curve_refresh_ticks) {
             controller.refresh_curves(&tel.acpi, &env);
         }
 
@@ -1590,7 +1710,7 @@ fn run(secs: Option<u64>, forced: Option<policy::Mode>, daemon: bool) -> anyhow:
         });
 
         let report_every = if daemon { 60 } else { 5 };
-        if tick % report_every == 0 || last_game.as_deref() != game.map(|g| g.process.as_str()) {
+        if tick.is_multiple_of(report_every) || last_game.as_deref() != game.map(|g| g.process.as_str()) {
             log.line(&format!(
                 "{:>5.0} {:>11} {:>6} {:>6} {:>5.0}% {:>5.0}% {:>6} {:>7}",
                 start.elapsed().as_secs_f32(),
@@ -1828,7 +1948,7 @@ fn watch() -> anyhow::Result<()> {
         }
 
         // Heartbeat every ~4s so it is obvious the tool is alive.
-        if ticks % 10 == 0 {
+        if ticks.is_multiple_of(10) {
             let cpu = acpi.read(0x0011_0013).map(|v| (v & 0xFFFF) * 100).unwrap_or(0);
             let gpu = acpi.read(0x0011_0014).map(|v| (v & 0xFFFF) * 100).unwrap_or(0);
             println!(
@@ -1876,6 +1996,54 @@ mod tests {
         Log::rotate(&log);
         let kept = std::fs::read(&previous).unwrap();
         assert!(kept.iter().all(|&b| b == b'y'), "eski nesil degistirilmemis");
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn force_rotate_moves_any_size_log() {
+        let dir = std::env::temp_dir().join("rogctl-log-force-test");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let log = dir.join("rogctl.log");
+        let previous = log.with_extension("log.1");
+
+        std::fs::write(&log, "manuel devir testi").unwrap();
+        Log::force_rotate(&log);
+        assert!(!log.exists(), "orijinal log kalmis");
+        assert!(previous.exists(), "devir dosyasi olusmamis");
+        assert_eq!(std::fs::read_to_string(&previous).unwrap(), "manuel devir testi");
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn mid_run_rotation_rolls_file_when_limit_exceeded() {
+        let dir = std::env::temp_dir().join("rogctl-log-midrun-test");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let log = dir.join("rogctl.log");
+        let previous = log.with_extension("log.1");
+
+        let mut logger = Log {
+            file: std::fs::OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open(&log)
+                .ok(),
+            path: Some(log.clone()),
+            bytes_written: LOG_MAX_BYTES - 10,
+        };
+
+        // Writing a line that pushes it over the limit should trigger automatic rollover
+        logger.line("bu satir limiti asirir ve rotasyonu tetikler");
+        assert!(previous.exists(), "calisma zamani rotasyonu olusmadi");
+        assert!(log.exists(), "yeni log dosyasi acilmadi");
+
+        // Further writes should continue into the new active log
+        logger.line("yeni log dosyasina yazildi");
+        let new_content = std::fs::read_to_string(&log).unwrap();
+        assert!(new_content.contains("yeni log dosyasina yazildi"));
 
         let _ = std::fs::remove_dir_all(&dir);
     }

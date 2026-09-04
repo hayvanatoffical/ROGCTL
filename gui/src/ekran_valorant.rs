@@ -59,8 +59,9 @@ pub fn goster(app: &mut Uygulama, ui: &mut Ui) {
             });
         }
         Some(Ok(hesaplar)) => {
+            type ValorantKarti = (String, bool, Vec<String>, Vec<(String, String)>);
             // Once cizilecek veriyi topla; boylece dongude app odunc alinmaz.
-            let kartlar: Vec<(String, bool, Vec<String>, Vec<(String, String)>)> = hesaplar
+            let kartlar: Vec<ValorantKarti> = hesaplar
                 .iter()
                 .map(|h| {
                     (

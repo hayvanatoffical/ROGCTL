@@ -251,7 +251,7 @@ fn yan_panel(app: &mut Uygulama, ctx: &egui::Context) {
                                 RichText::new(s.ad())
                                     .size(13.5)
                                     .strong()
-                                    .color(if secili { tema::YAZI } else { tema::YAZI }),
+                                    .color(tema::YAZI),
                             );
                             ui.label(RichText::new(s.alt()).size(10.5).color(tema::YAZI_SOLUK));
                         });

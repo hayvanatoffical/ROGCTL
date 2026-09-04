@@ -5,7 +5,6 @@
 //! and alt-tabbing out of one should not drop the machine back to a quiet
 //! envelope while the match is still going.
 
-use std::ffi::c_void;
 use std::mem;
 
 use windows_sys::Win32::Foundation::{CloseHandle, INVALID_HANDLE_VALUE};
@@ -43,6 +42,6 @@ pub fn running_names() -> Vec<String> {
         }
     }
 
-    unsafe { CloseHandle(snap as *mut c_void) };
+    unsafe { CloseHandle(snap) };
     names
 }

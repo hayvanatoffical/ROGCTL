@@ -16,6 +16,7 @@
 //! that wrong and the call fails with a status code instead of scribbling, and
 //! the buffer used here is far larger than the struct can plausibly be, so a
 //! layout mistake cannot run off the end of it.
+#![allow(clippy::missing_transmute_annotations, clippy::type_complexity)]
 
 use std::ffi::c_void;
 
@@ -603,10 +604,12 @@ impl NvApi {
         let mut results = Vec::new();
 
         for &id in ids {
-            // Already gone is the goal state, not a failure. Without this the
-            // daemon logged a warning for both idle settings on every single
-            // startup after the first successful removal.
-            if self.get_u32_in(s, p, id).is_none() {
+            // If the setting is not in this profile (or already gone), it is
+            // already at driver default / unmanaged.
+            let in_profile = self
+                .get_setting_in(s, p, id)
+                .is_some_and(|(_, _, loc)| loc == LOCATION_CURRENT_PROFILE);
+            if !in_profile {
                 results.push((id, NVAPI_OK));
                 continue;
             }

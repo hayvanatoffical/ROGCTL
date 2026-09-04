@@ -17,6 +17,7 @@
 //! So the rule here is: reclaim at the moments it buys something (a game
 //! starting, a game exiting, genuine free memory running out) and never on a
 //! timer. The useful cache is left alone unless explicitly asked otherwise.
+#![allow(clippy::missing_transmute_annotations)]
 
 use std::ffi::c_void;
 use std::time::Instant;

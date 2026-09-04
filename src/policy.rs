@@ -1,4 +1,4 @@
-﻿//! Workload classification and the control policy that follows from it.
+//! Workload classification and the control policy that follows from it.
 //!
 //! Two decisions live here. First, *what is the machine doing* - inferred from
 //! CPU load, GPU load and VRAM occupancy, smoothed so a loading screen or a
@@ -292,6 +292,12 @@ const SATURATED_SAFETY_MARGIN_C: u32 = 8;
 
 /// Utilisation above which the GPU is the thing limiting frame rate.
 const SATURATED_UTIL: f32 = 0.90;
+
+impl Default for Governor {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 impl Governor {
     pub fn new() -> Self {

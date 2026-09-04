@@ -66,11 +66,7 @@ impl Gecmis {
             toplam += alan(o) as u64;
             adet += 1;
         }
-        if adet == 0 {
-            0
-        } else {
-            (toplam / adet) as u32
-        }
+        toplam.checked_div(adet).unwrap_or(0) as u32
     }
 
     /// Son pencerenin tepesi.

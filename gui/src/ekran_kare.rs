@@ -15,6 +15,7 @@ use crate::tema;
 use crate::veri;
 use crate::{Bildirim, Uygulama};
 
+#[derive(Default)]
 pub struct KareDurumu {
     pub panel_hz: u32,
     pub vrr: bool,
@@ -22,18 +23,6 @@ pub struct KareDurumu {
     /// `rogctl nv kim` ciktisi - hangi profilin sinirladigi.
     pub kim: Option<String>,
     okundu: Option<Instant>,
-}
-
-impl Default for KareDurumu {
-    fn default() -> Self {
-        Self {
-            panel_hz: 0,
-            vrr: false,
-            nvapi_acildi: false,
-            kim: None,
-            okundu: None,
-        }
-    }
 }
 
 impl KareDurumu {
