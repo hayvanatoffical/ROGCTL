@@ -44,6 +44,7 @@ pub struct Telemetry {
     pub gpu: Option<Gpu>,
     prev_idle: u64,
     prev_busy: u64,
+    prev_cpu_temp: u32,
 }
 
 impl Telemetry {
@@ -57,6 +58,7 @@ impl Telemetry {
             gpu,
             prev_idle: 0,
             prev_busy: 0,
+            prev_cpu_temp: 0,
         })
     }
 
@@ -97,8 +99,18 @@ impl Telemetry {
             None => (GpuSample::default(), false),
         };
 
+        let raw_cpu_temp = read(devices::CPU_TEMP);
+        let cpu_temp_c = if (1..125).contains(&raw_cpu_temp) {
+            self.prev_cpu_temp = raw_cpu_temp;
+            raw_cpu_temp
+        } else if self.prev_cpu_temp > 0 {
+            self.prev_cpu_temp
+        } else {
+            raw_cpu_temp
+        };
+
         Sample {
-            cpu_temp_c: read(devices::CPU_TEMP),
+            cpu_temp_c,
             cpu_util,
             cpu_fan_rpm: read(devices::CPU_FAN_RPM) * 100,
             gpu_fan_rpm: read(devices::GPU_FAN_RPM) * 100,
